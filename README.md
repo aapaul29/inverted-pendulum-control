@@ -1,170 +1,124 @@
-# Inverted Pendulum Stabilization — State-Space Control & LQR
-
-A MATLAB/Simulink implementation of a linearized cart-pendulum system stabilized using Linear Quadratic Regulator (LQR) control. This project demonstrates nonlinear modeling, state-space linearization, controllability analysis, and optimal state-feedback control design.
-
----
-
-## Project Overview
-
-The inverted pendulum on a cart is a classic benchmark in control systems engineering. The system is inherently unstable in open loop — the goal is to design a controller that keeps the pendulum upright while allowing the cart to track a desired position.
-
-This project covers:
-- Derivation of the nonlinear equations of motion
-- Linearization around the upright equilibrium
-- State-space representation and controllability verification
-- LQR controller design
-- Closed-loop simulation in MATLAB and Simulink
-- Comparison of open-loop vs closed-loop behavior
-- Disturbance rejection analysis
-
----
+# Triple Inverted Pendulum on a Cart — LQR Control
 
 ## System Description
 
-The system consists of a cart of mass `M` free to slide along a horizontal track, with a pendulum of mass `m` and length `l` attached at a pivot.
+A triple inverted pendulum on a cart is one of the most challenging benchmark control problems. Three rigid links are connected in series and balanced upright above a horizontally moving cart. The system is highly unstable with 4 degrees of freedom and 8 states.
 
-**State vector:**
-
+### State Vector
 ```
-x = [cart position; cart velocity; pendulum angle; angular velocity]
-  = [x; x_dot; theta; theta_dot]
+x = [x, θ₁, θ₂, θ₃, ẋ, θ̇₁, θ̇₂, θ̇₃]
 ```
+| Symbol | Meaning | Unit |
+|--------|---------|------|
+| x | cart horizontal position | m |
+| θ₁, θ₂, θ₃ | link angles from vertical (upright = 0) | rad |
+| ẋ, θ̇₁, θ̇₂, θ̇₃ | corresponding velocities | m/s, rad/s |
 
-**Linearized around:** `theta = 0` (upright equilibrium)
-
-**System parameters (defined in `parameters.m`):**
-
-| Parameter | Symbol | Value |
-|-----------|--------|-------|
-| Cart mass | M | 1.0 kg |
-| Pendulum mass | m | 0.2 kg |
-| Pendulum length | l | 0.5 m |
-| Gravitational acceleration | g | 9.81 m/s² |
-| Friction coefficient | b | 0.1 N·s/m |
+### Mechanical Schematic
+```
+          o  ← link 3 tip
+          |  (m₃, l₃)
+          o  ← joint 2
+          |  (m₂, l₂)
+          o  ← joint 1
+          |  (m₁, l₁)
+    [===cart===]  →  u (force)
+    ___________
+```
 
 ---
 
-## Repository Structure
+## Files
 
-```
-inverted-pendulum-control/
-│
-├── parameters.m          # System parameters and state-space matrices
-├── lqr_design.m          # LQR gain computation and controllability check
-├── open_loop_sim.m       # Open-loop simulation (unstable response)
-├── closed_loop_sim.m     # Closed-loop LQR simulation with plots
-│
-├── simulink/
-│   └── pendulum_model.slx    # Simulink block diagram (Weekend 2)
-│
-├── results/
-│   ├── open_loop_response.png
-│   ├── closed_loop_response.png
-│   └── disturbance_response.png
-│
-└── README.md
-```
+| File | Description |
+|------|-------------|
+| `parameters.m` | All physical constants (masses, lengths, inertias, gravity) |
+| `lqr_design.m` | Linearised state-space model, controllability check, LQR gain |
+| `open_loop_sim.m` | Open-loop simulation — shows exponential divergence |
+| `closed_loop_sim.m` | Closed-loop LQR simulation + disturbance rejection test |
+| `simulink/pendulum_model.slx` | Simulink model (nonlinear) |
+| `docs/system_derivation.pdf` | Full Lagrangian derivation |
 
 ---
 
 ## How to Run
 
-### Prerequisites
-- MATLAB R2021a or later
-- Control System Toolbox
+1. Open MATLAB and set the working directory to the repo root.
+2. Make sure the `plots/` folder exists (or create it: `mkdir plots`).
+3. Run in this order:
 
-### Steps
+```matlab
+parameters        % load system constants
+lqr_design        % build model and compute LQR gain K
+open_loop_sim     % visualise unstable open-loop behaviour
+closed_loop_sim   % visualise stabilised closed-loop + disturbance
+```
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/aapaul29/inverted-pendulum-control.git
-   ```
+Plots are saved automatically to `plots/`.
 
-2. Open MATLAB and navigate to the project folder:
-   ```matlab
-   cd 'C:\Users\aarya\OneDrive\Desktop\inverted-pendulum-control'
-   ```
+---
 
-3. Run scripts in order:
-   ```matlab
-   run('parameters.m')       % Load system parameters
-   run('lqr_design.m')       % Design LQR controller
-   run('open_loop_sim.m')    % Simulate unstable open-loop
-   run('closed_loop_sim.m')  % Simulate stabilized closed-loop
-   ```
+## Linearised Model
+
+Around the upright equilibrium the equations of motion become:
+
+```
+M(q) q̈ = Bᵤ·u  −  C·q̇  −  K·q
+```
+
+where **M** is the 4×4 inertia matrix (cart + 3 links), **K** is a diagonal
+"negative-stiffness" matrix (gravity destabilises the upright position), and
+**C** is the damping matrix (cart friction only).
+
+Rewritten as an 8-state linear system:
+```
+ẋ = A·x + B·u,   A ∈ ℝ⁸ˣ⁸,  B ∈ ℝ⁸
+```
+
+---
+
+## Controller Design — LQR
+
+Minimise the infinite-horizon cost:
+```
+J = ∫ (xᵀQx + uᵀRu) dt
+```
+
+Tuned weights:
+```
+Q = diag([10, 100, 100, 100, 1, 10, 10, 10])
+R = 0.01
+```
+Higher penalty on pendulum angles θ₁–θ₃ than on cart position.
+Low R allows aggressive actuator force.
 
 ---
 
 ## Results
 
-### Open-Loop Response
-Without control, the pendulum angle diverges exponentially from any non-zero initial condition, confirming the system is unstable in open loop.
+### Open-Loop: Instability
+Even a 1–2° perturbation causes all links to fall within ~2 s.
+The cart position diverges simultaneously.
 
-### Closed-Loop Response (LQR)
-With LQR state feedback, the pendulum stabilizes to the upright position from an initial angle of ~5°. The cart position converges to zero with no steady-state error.
-
-**Performance summary:**
-
-| Metric | Value |
-|--------|-------|
-| Settling time (angle) | ~2.5 s |
-| Settling time (cart) | ~3.5 s |
-| Overshoot | < 5% |
-| Steady-state error | 0 |
+### Closed-Loop: Stabilisation
+From initial angles of ~3–5° the LQR controller returns all states
+to the upright equilibrium. Typical settling time: 3–5 s.
 
 ### Disturbance Rejection
-An impulse disturbance (force applied to cart) is rejected within ~3 seconds, with the pendulum returning to vertical.
+A velocity impulse applied to the cart at t = 5 s is rejected;
+all states recover to equilibrium within ~2 s.
 
 ---
 
-## Controller Design
+## Physical Parameters
 
-### Controllability
-The controllability matrix `C = [B, AB, A²B, A³B]` is computed and verified to have full rank (rank = 4), confirming the system is fully controllable.
+| Parameter | Symbol | Value |
+|-----------|--------|-------|
+| Cart mass | M | 1.0 kg |
+| Link 1 mass / length | m₁, l₁ | 0.5 kg, 0.6 m |
+| Link 2 mass / length | m₂, l₂ | 0.4 kg, 0.5 m |
+| Link 3 mass / length | m₃, l₃ | 0.3 kg, 0.4 m |
+| Cart friction | b | 0.1 N·s/m |
+| Gravity | g | 9.81 m/s² |
 
-### LQR Formulation
-The LQR minimizes the cost function:
-
-```
-J = ∫ (x' Q x + u' R u) dt
-```
-
-**Weighting matrices used:**
-
-```matlab
-Q = diag([1, 1, 10, 10]);   % Penalize angle deviation most heavily
-R = 0.01;                    % Allow aggressive control input
-```
-
-The optimal gain matrix `K` is computed via MATLAB's `lqr()` function, and control input is `u = -K * x`.
-
----
-
-## Key Concepts Demonstrated
-
-- **Linearization** of a nonlinear dynamical system
-- **State-space modeling** (A, B, C, D matrices)
-- **Controllability analysis** using the controllability matrix
-- **LQR design** and cost function interpretation
-- **Closed-loop stability** via eigenvalue placement
-- **Disturbance rejection** in feedback systems
-
----
-
-## Skills & Tools
-
-`MATLAB` · `Simulink` · `Control System Toolbox` · `State-Space Control` · `LQR` · `Linearization` · `GitHub`
-
----
-
-## Resume Bullet
-
-> Modeled and stabilized an inverted pendulum using state-space methods and LQR control in MATLAB/Simulink, achieving closed-loop stability for an inherently unstable system with disturbance rejection within 3 seconds.
-
----
-
-## References
-
-- Ogata, K. — *Modern Control Engineering*, 5th Ed.
-- Franklin, Powell, Emami-Naeini — *Feedback Control of Dynamic Systems*
-- MATLAB Documentation: [`lqr`](https://www.mathworks.com/help/control/ref/lqr.html), [`ss`](https://www.mathworks.com/help/control/ref/ss.html)
+Each link is modelled as a uniform rod: CoM at l/2, I = m·l²/3.
