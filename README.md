@@ -36,6 +36,7 @@ x = [x, θ₁, θ₂, θ₃, ẋ, θ̇₁, θ̇₂, θ̇₃]
 | `lqr_design.m` | Linearised state-space model, controllability check, LQR gain |
 | `open_loop_sim.m` | Open-loop simulation — shows exponential divergence |
 | `closed_loop_sim.m` | Closed-loop LQR simulation + disturbance rejection test |
+| `animate_pendulum.m` | Real-time animation; saves open-loop & closed-loop GIFs |
 | `simulink/pendulum_model.slx` | Simulink model (nonlinear) |
 | `docs/system_derivation.pdf` | Full Lagrangian derivation |
 
@@ -52,6 +53,7 @@ parameters        % load system constants
 lqr_design        % build model and compute LQR gain K
 open_loop_sim     % visualise unstable open-loop behaviour
 closed_loop_sim   % visualise stabilised closed-loop + disturbance
+animate_pendulum  % render animation GIFs (saved to plots/)
 ```
 
 Plots are saved automatically to `plots/`.
