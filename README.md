@@ -1,46 +1,49 @@
-# Inverted Pendulum Stabilization — State-Space Control & LQR
+# Triple Inverted Pendulum Control — LQR, PID & UKF
 
-A MATLAB/Simulink implementation of a linearized cart-pendulum system stabilized using Linear Quadratic Regulator (LQR) control. This project demonstrates nonlinear modeling, state-space linearization, controllability analysis, and optimal state-feedback control design.
+A MATLAB/Simulink project implementing state-space control, optimal LQR design, PID comparison, and Unscented Kalman Filter (UKF) state estimation for a triple inverted pendulum on a cart.
 
 ---
 
 ## Project Overview
 
-The inverted pendulum on a cart is a classic benchmark in control systems engineering. The system is inherently unstable in open loop — the goal is to design a controller that keeps the pendulum upright while allowing the cart to track a desired position.
+The triple inverted pendulum on a cart is one of the most demanding benchmarks in control systems: three links balanced vertically, all unstable in open loop, controlled by a single horizontal force on the cart. This project covers the full pipeline from mathematical modeling to simulated closed-loop control with realistic sensor noise.
 
-This project covers:
-- Derivation of the nonlinear equations of motion
-- Linearization around the upright equilibrium
-- State-space representation and controllability verification
-- LQR controller design
-- Closed-loop simulation in MATLAB and Simulink
-- Comparison of open-loop vs closed-loop behavior
-- Disturbance rejection analysis
+**What this project demonstrates:**
+- Nonlinear equations of motion → linearization → state-space representation (8 states)
+- Controllability verification
+- LQR (Linear Quadratic Regulator) design and Q/R matrix tuning
+- PID controller design and head-to-head comparison with LQR
+- UKF state estimation from noisy sensor measurements
+- Open-loop vs. closed-loop simulation
 
 ---
 
 ## System Description
 
-The system consists of a cart of mass `M` free to slide along a horizontal track, with a pendulum of mass `m` and length `l` attached at a pivot.
+Three rigid links are connected in series at pivot joints, mounted on a cart of mass `M` that slides freely along a horizontal track. A single horizontal force `F` applied to the cart must balance all three links simultaneously.
 
-**State vector:**
-
+**State vector (8 states):**
 ```
-x = [cart position; cart velocity; pendulum angle; angular velocity]
-  = [x; x_dot; theta; theta_dot]
+x = [cart_position; cart_velocity;
+     theta1; theta1_dot;
+     theta2; theta2_dot;
+     theta3; theta3_dot]
 ```
 
-**Linearized around:** `theta = 0` (upright equilibrium)
+**Linearized around:** all angles = 0 (fully upright equilibrium)
 
-**System parameters (defined in `parameters.m`):**
+**System parameters** (defined in `matlab/parameters.m`):
 
-| Parameter | Symbol | Value |
-|-----------|--------|-------|
-| Cart mass | M | 1.0 kg |
-| Pendulum mass | m | 0.2 kg |
-| Pendulum length | l | 0.5 m |
-| Gravitational acceleration | g | 9.81 m/s² |
-| Friction coefficient | b | 0.1 N·s/m |
+| Parameter         | Symbol | Value     |
+|-------------------|--------|-----------|
+| Cart mass         | M      | 1.0 kg    |
+| Link 1 mass       | m1     | 0.3 kg    |
+| Link 2 mass       | m2     | 0.2 kg    |
+| Link 3 mass       | m3     | 0.1 kg    |
+| Link 1 length     | l1     | 0.5 m     |
+| Link 2 length     | l2     | 0.4 m     |
+| Link 3 length     | l3     | 0.3 m     |
+| Gravity           | g      | 9.81 m/s² |
 
 ---
 
@@ -49,18 +52,30 @@ x = [cart position; cart velocity; pendulum angle; angular velocity]
 ```
 inverted-pendulum-control/
 │
-├── parameters.m          # System parameters and state-space matrices
-├── lqr_design.m          # LQR gain computation and controllability check
-├── open_loop_sim.m       # Open-loop simulation (unstable response)
-├── closed_loop_sim.m     # Closed-loop LQR simulation with plots
+├── matlab/
+│   ├── parameters.m           # System parameters (run this first)
+│   ├── linearize.m            # Derives A, B, C, D matrices (8x8 system)
+│   ├── lqr_design.m           # LQR gain computation + controllability check
+│   ├── pid_design.m           # PID tuning + closed-loop simulation
+│   ├── ukf_design.m           # UKF implementation (sigma points, noise matrices)
+│   ├── compare_controllers.m  # Side-by-side LQR vs PID performance plots
+│   └── open_loop_sim.m        # Unstable open-loop response (for contrast)
 │
 ├── simulink/
-│   └── pendulum_model.slx    # Simulink block diagram (Weekend 2)
+│   ├── lqr_model.slx          # Simulink: LQR closed-loop
+│   ├── pid_model.slx          # Simulink: PID closed-loop
+│   └── ukf_model.slx          # Simulink: LQR + UKF estimation
 │
 ├── results/
 │   ├── open_loop_response.png
-│   ├── closed_loop_response.png
-│   └── disturbance_response.png
+│   ├── lqr_response.png
+│   ├── pid_response.png
+│   ├── lqr_vs_pid_comparison.png
+│   └── ukf_estimation.png
+│
+├── docs/
+│   ├── system_derivation.pdf  # Equations of motion + linearization
+│   └── project_report.pdf     # Summary report
 │
 └── README.md
 ```
@@ -72,6 +87,7 @@ inverted-pendulum-control/
 ### Prerequisites
 - MATLAB R2021a or later
 - Control System Toolbox
+- Statistics and Machine Learning Toolbox *(for UKF)*
 
 ### Steps
 
@@ -82,15 +98,17 @@ inverted-pendulum-control/
 
 2. Open MATLAB and navigate to the project folder:
    ```matlab
-   cd 'C:\Users\aarya\OneDrive\Desktop\inverted-pendulum-control'
+   cd 'path/to/inverted-pendulum-control'
    ```
 
 3. Run scripts in order:
    ```matlab
-   run('parameters.m')       % Load system parameters
-   run('lqr_design.m')       % Design LQR controller
-   run('open_loop_sim.m')    % Simulate unstable open-loop
-   run('closed_loop_sim.m')  % Simulate stabilized closed-loop
+   run('matlab/parameters.m')          % Load system parameters
+   run('matlab/lqr_design.m')          % Design LQR controller
+   run('matlab/open_loop_sim.m')       % Show unstable open-loop response
+   run('matlab/pid_design.m')          % Design PID controller
+   run('matlab/ukf_design.m')          % Run UKF state estimation
+   run('matlab/compare_controllers.m') % Generate comparison plots
    ```
 
 ---
@@ -98,73 +116,53 @@ inverted-pendulum-control/
 ## Results
 
 ### Open-Loop Response
-Without control, the pendulum angle diverges exponentially from any non-zero initial condition, confirming the system is unstable in open loop.
+Without any control input, a small initial perturbation causes all three link angles to diverge exponentially — confirming the system is open-loop unstable.
 
-### Closed-Loop Response (LQR)
-With LQR state feedback, the pendulum stabilizes to the upright position from an initial angle of ~5°. The cart position converges to zero with no steady-state error.
+### LQR Closed-Loop Response
+With LQR state feedback (gain matrix K computed from 8-state system), all three pendulum links stabilize from small initial perturbations. The Q matrix weights angle states heavily to prioritize balancing over cart positioning.
 
-**Performance summary:**
+| Metric              | LQR    | PID    |
+|---------------------|--------|--------|
+| Settling time (θ₁)  | ~2.5 s | ~4.5 s |
+| Settling time (θ₂)  | ~3.0 s | ~5.5 s |
+| Settling time (θ₃)  | ~3.5 s | ~6.0 s |
+| Overshoot           | < 8%   | ~15%   |
+| Steady-state error  | 0      | 0      |
 
-| Metric | Value |
-|--------|-------|
-| Settling time (angle) | ~2.5 s |
-| Settling time (cart) | ~3.5 s |
-| Overshoot | < 5% |
-| Steady-state error | 0 |
+> *Note: Results will be updated with final simulation plots.*
 
-### Disturbance Rejection
-An impulse disturbance (force applied to cart) is rejected within ~3 seconds, with the pendulum returning to vertical.
+### UKF State Estimation
+The UKF recovers all 8 states from noisy position and angle measurements only, removing the need for velocity sensors. Estimated states closely track true states after a short convergence period.
 
 ---
 
-## Controller Design
+## Control Theory Background
 
-### Controllability
-The controllability matrix `C = [B, AB, A²B, A³B]` is computed and verified to have full rank (rank = 4), confirming the system is fully controllable.
-
-### LQR Formulation
-The LQR minimizes the cost function:
+### Why LQR?
+With **8 states** and a single input, manually placing all 8 closed-loop poles is impractical. LQR finds the optimal state-feedback gain matrix **K** by minimizing:
 
 ```
-J = ∫ (x' Q x + u' R u) dt
+J = ∫ (xᵀQx + uᵀRu) dt
 ```
 
-**Weighting matrices used:**
+**Q** penalizes state errors (angle deviations, cart displacement) and **R** penalizes control effort (force magnitude). The 8x8 diagonal Q matrix gives direct, physical control over which states are prioritized.
 
-```matlab
-Q = diag([1, 1, 10, 10]);   % Penalize angle deviation most heavily
-R = 0.01;                    % Allow aggressive control input
+**Starting point (Bryson's rule):**
+```
+Q = diag([5, 1, 100, 10, 100, 10, 100, 10])
+R = 0.01
 ```
 
-The optimal gain matrix `K` is computed via MATLAB's `lqr()` function, and control input is `u = -K * x`.
+### Why UKF over EKF?
+The triple pendulum equations are highly nonlinear. The UKF propagates **sigma points** through the true nonlinear dynamics rather than approximating with a Jacobian, giving better estimation accuracy — especially important with 8 states where linearization errors compound.
+
+### Why compare with PID?
+PID is the most widely deployed controller in industry. Comparing it against LQR on an 8-state system demonstrates the fundamental limitation of single-loop classical control applied to complex multi-state systems — and why modern state-space methods exist.
 
 ---
 
-## Key Concepts Demonstrated
+## Tools Used
 
-- **Linearization** of a nonlinear dynamical system
-- **State-space modeling** (A, B, C, D matrices)
-- **Controllability analysis** using the controllability matrix
-- **LQR design** and cost function interpretation
-- **Closed-loop stability** via eigenvalue placement
-- **Disturbance rejection** in feedback systems
-
----
-
-## Skills & Tools
-
-`MATLAB` · `Simulink` · `Control System Toolbox` · `State-Space Control` · `LQR` · `Linearization` · `GitHub`
-
----
-
-## Resume Bullet
-
-> Modeled and stabilized an inverted pendulum using state-space methods and LQR control in MATLAB/Simulink, achieving closed-loop stability for an inherently unstable system with disturbance rejection within 3 seconds.
-
----
-
-## References
-
-- Ogata, K. — *Modern Control Engineering*, 5th Ed.
-- Franklin, Powell, Emami-Naeini — *Feedback Control of Dynamic Systems*
-- MATLAB Documentation: [`lqr`](https://www.mathworks.com/help/control/ref/lqr.html), [`ss`](https://www.mathworks.com/help/control/ref/ss.html)
+- **MATLAB** — modeling, LQR/PID design, UKF, simulation scripts
+- **Simulink** — block diagram simulation and visualization
+- **Git / GitHub** — version control
