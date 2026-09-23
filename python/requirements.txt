@@ -1,0 +1,7 @@
+numpy
+scipy
+matplotlib
+gymnasium
+stable-baselines3[extra]
+filterpy
+jupyter

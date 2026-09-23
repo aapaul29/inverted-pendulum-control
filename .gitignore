@@ -1,0 +1,18 @@
+# Python
+python/venv/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# RL artefacts
+python/rl/logs/
+python/rl/saved_models/*.zip
+python/rl/saved_models/*.pkl
+
+# Jupyter
+.jupyter/
+
+# OS
+.DS_Store
+Thumbs.db
